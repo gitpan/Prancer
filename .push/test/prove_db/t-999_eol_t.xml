@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="t-999_eol_t" errors="0" failures="0" tests="29" time="0.307622909545898" skipped="0">
+  <testcase name="t/999.eol.t"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Request.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Config.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Context.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Const.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Response.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Logger.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Session.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Application.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Template.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Database.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Request/Upload.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Database/Driver.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Database/Driver/Pg.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Template/TemplateToolkit.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Session/Store/Memory.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Session/Store/YAML.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Session/Store/Database.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Session/Store/Database/Driver.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Session/Store/Database/Driver/Pg.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Session/State/Cookie.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Logger/Console.pm'"/>
+  <testcase name="- No incorrect line endings in 'lib/Prancer/Middleware/Logger.pm'"/>
+  <testcase name="- No incorrect line endings in 't/999.notabs.t'"/>
+  <testcase name="- No incorrect line endings in 't/000.required.t'"/>
+  <testcase name="- No incorrect line endings in 't/000.optional.t'"/>
+  <testcase name="- No incorrect line endings in 't/999.critic.t'"/>
+  <testcase name="- No incorrect line endings in 't/999.eol.t'"/>
+  <testcase name="- No incorrect line endings in 't/000.use.t'"/>
+</testsuite>

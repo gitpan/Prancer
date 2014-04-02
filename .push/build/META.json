@@ -1,0 +1,49 @@
+{
+   "abstract" : "unknown",
+   "author" : [
+      "Paul Lockaby <plockaby AT cpan DOT org>"
+   ],
+   "dynamic_config" : 0,
+   "generated_by" : "ExtUtils::MakeMaker version 6.66, CPAN::Meta::Converter version 2.120921",
+   "license" : [
+      "perl_5"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "prancer",
+   "no_index" : {
+      "directory" : [
+         "t",
+         "inc"
+      ]
+   },
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "0"
+         }
+      },
+      "configure" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "0"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "Config::Any" : "0",
+            "Hash::Merge::Simple" : "0",
+            "Hash::MultiValue" : "0",
+            "Module::Load" : "0",
+            "Plack" : "1.0029",
+            "Router::Boom" : "1.01",
+            "Try::Tiny" : "0",
+            "URI" : "0",
+            "YAML" : "0"
+         }
+      }
+   },
+   "release_status" : "testing",
+   "version" : "0.02"
+}
