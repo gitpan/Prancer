@@ -1,7 +1,0 @@
-PASS t/000.optional.t
-PASS t/000.required.t
-PASS t/000.use.t
-PASS t/999.critic.t
-PASS t/999.eol.t
-PASS t/999.notabs.t
-ALL DONE
