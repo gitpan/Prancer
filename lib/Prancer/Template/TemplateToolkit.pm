@@ -21,20 +21,24 @@ sub new {
         croak;
     };
 
-    die "no template path is configured\n" unless defined($config->{'template_dir'});
-    my $include_path = Cwd::realpath($config->{'template_dir'});
-    die "${include_path} does not exist\n" unless (-e $include_path);
-    die "${include_path} is not readable\n" unless (-r $include_path);
+    my $template_path = undef;
+    my $template_dir = $config->{'template_dir'};
+    die "no template_dir is configured\n" unless defined($template_dir);
+    $template_path = Cwd::realpath($template_dir);
+    die "${template_dir} does not exist\n" unless defined($template_path);
+    die "${template_dir} is not readable\n" unless (-r $template_path);
 
-    my $cache_path = (defined($config->{'cache_dir'}) ? Cwd::realpath($config->{'cache_dir'}) : undef);
-    if (defined($cache_path)) {
-        die "${cache_path} does not exist\n" unless (-e $cache_path);
-        die "${cache_path} is not readable\n" unless (-r $cache_path);
-        die "${cache_path} is not writable\n" unless (-w $cache_path);
+    my $cache_path = undef;
+    my $cache_dir = $config->{'cache_dir'};
+    if (defined($cache_dir)) {
+        $cache_path = Cwd::realpath($cache_dir);
+        die "${cache_dir} does not exist\n" unless defined($cache_path);
+        die "${cache_dir} is not readable\n" unless (-r $cache_path);
+        die "${cache_dir} is not writable\n" unless (-w $cache_path);
     }
 
     my $engine = Template->new({
-        'INCLUDE_PATH' => $include_path,
+        'INCLUDE_PATH' => $template_path,
         'ANYCASE'      => 1,
         'START_TAG'    => $config->{'start_tag'} || '<%',
         'END_TAG'      => $config->{'end_tag'} || '%>',
@@ -47,7 +51,7 @@ sub new {
     });
     $self->{'_engine'} = $engine;
 
-    logger->info("initialized template engine with templates from ${include_path}");
+    logger->info("initialized template engine with templates from ${template_path}");
     logger->info("templates will be cached to ${cache_path}") if ($cache_path);
 
     return $self;

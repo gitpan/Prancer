@@ -138,8 +138,8 @@ sub param {
     return keys(%{$self->parameters()}) unless @_;
 
     my $key = shift;
-    return $self->parameters->{$key} unless wantarray;
-    return $self->parameters->get_all($key);
+    return $self->params->{$key} unless wantarray;
+    return $self->params->get_all($key);
 }
 
 sub params {

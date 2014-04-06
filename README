@@ -52,7 +52,7 @@ To install this module, run the following commands:
     make test
     make install
 
-If this ever makes it to CPAN you can install it with this simple command:
+To install from CPAN you can run this simple command:
 
     perl -MCPAN -e 'install Prancer'
 
@@ -61,7 +61,6 @@ These optional libraries will enhance the functionality of Prancer:
     DBI
     Template
     Plack::Middleware::Session
-    Plack::Middleware::ServerStatus::Lite
 
 CREDITS
 

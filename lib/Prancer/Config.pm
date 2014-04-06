@@ -26,15 +26,22 @@ sub has {
 }
 
 sub get {
-    my ($self, $key) = @_;
+    my ($self, $key, $default) = @_;
 
     # only return things if the are running in a non-void context
-    if (defined(wantarray()) && defined($self->{'_config'}->{$key})) {
-        # make a clone of the value to avoid inadvertently changing things
-        # via references
-        my $value = $self->{'_config'}->{$key};
-        return dclone($value) if ref($value);
-        return $value;
+    if (defined(wantarray())) {
+        if (exists($self->{'_config'}->{$key})) {
+            # make a clone of the value to avoid inadvertently changing things
+            # via references
+            my $value = $self->{'_config'}->{$key};
+            return unless defined($value);
+            return dclone($value) if ref($value);
+            return $value;
+        } else {
+            return unless defined($default);
+            return dclone($default) if ref($default);
+            return $default;
+        }
     }
 
     return;

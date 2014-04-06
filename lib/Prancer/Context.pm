@@ -180,6 +180,7 @@ This gives access to the session in various ways. For example:
 
     my $does_foo_exist = context->session->has('foo');
     my $foo = context->session->get('foo');
+    my $bar = context->session->get('bar', 'some default value if bar does not exist');
     context->session->set('foo', 'bar');
     context->session->remove('foo');
 
