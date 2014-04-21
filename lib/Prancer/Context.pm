@@ -29,8 +29,14 @@ sub template {
     # for the record: i hate this syntax
     $vars = Hash::Merge::Simple->merge({'config' => Prancer::config()->as_hashref()}, $vars);
 
+    # merge headers into the template
+    $vars = Hash::Merge::Simple->merge({'headers' => $self->headers}, $vars);
+
     # merge session into the template
     $vars = Hash::Merge::Simple->merge({'session' => $self->session->as_hashref()}, $vars);
+
+    # merge cookies into the template
+    $vars = Hash::Merge::Simple->merge({'cookies' => $self->cookies->as_hashref()}, $vars);
 
     # merge params into the template
     $vars = Hash::Merge::Simple->merge({'params' => $self->params->as_hashref_mixed()}, $vars);
@@ -65,6 +71,11 @@ sub header {
     return;
 }
 
+sub headers {
+    my $self = shift;
+    return $self->{'_request'}->headers()
+}
+
 sub cookie {
     my $self = shift;
     my %args = (
@@ -85,6 +96,11 @@ sub cookie {
     }
 
     return;
+}
+
+sub cookies {
+    my $self = shift;
+    return $self->{'_request'}->cookies();
 }
 
 sub request {

@@ -27,4 +27,4 @@ requires:
   Try::Tiny: 0
   URI: 0
   YAML: 0
-version: 0.04
+version: 0.05

@@ -11,6 +11,7 @@ WriteMakefile(
     'VERSION_FROM'  => 'lib/Prancer.pm',
     'PREREQ_PM'     => {
         'Plack'                      => '1.0029',
+        'Plack::Middleware::Session' => '0.21',
         'Try::Tiny'                  => '0',
         'Config::Any'                => '0',
         'Hash::Merge::Simple'        => '0',

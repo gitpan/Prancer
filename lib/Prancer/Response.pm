@@ -140,11 +140,11 @@ sub _bake_cookie {
     my ($self, $key, $value) = @_;
 
     my @cookie = (URI::Escape::uri_escape($key) . "=" . URI::Escape::uri_escape($value->{'value'}));
-    push(@cookie, "domain="  . $value->{'domain'})                    if $value->{'domain'};
-    push(@cookie, "path="    . $value->{'path'})                      if $value->{'path'};
-    push(@cookie, "expires=" . $self->_cookie_date($self->expires())) if $value->{'expires'};
-    push(@cookie, "secure")                                           if $value->{'secure'};
-    push(@cookie, "HttpOnly")                                         if $value->{'httponly'};
+    push(@cookie, "domain="  . $value->{'domain'})                       if $value->{'domain'};
+    push(@cookie, "path="    . $value->{'path'})                         if $value->{'path'};
+    push(@cookie, "expires=" . $self->_cookie_date($value->{'expires'})) if $value->{'expires'};
+    push(@cookie, "secure")                                              if $value->{'secure'};
+    push(@cookie, "HttpOnly")                                            if $value->{'httponly'};
     return join("; ", @cookie);
 
 }
@@ -180,11 +180,9 @@ Prancer::Response
 
         ...
 
-        my $response = context->response();
-        status(Prancer::Const::OK);
-        response->header("Content-Type" => "text/plain");
-        response->body("hello, goodbye");
-        finalize;
+        context->header(set => "Content-Type", value => "text/plain");
+        context->body("hello, goodbye");
+        context->finalize(Prancer::Const::OK);
     }
 
     # or using a callback
@@ -192,14 +190,13 @@ Prancer::Response
 
         ...
 
-        status(Prancer::Const::OK);
-        $response->header("Content-Type" => "text/plain");
-        $response->callback(sub {
+        context->header(set => "Content-Type", value => "text/plain");
+        context->body(sub {
             my $writer = shift;
             $writer->write("What's up?");
             $writer->close();
         });
-        finalize;
+        context->finalize(Prancer::Const::OK);
     }
 
 =head1 ATTRIBUTES
@@ -212,8 +209,8 @@ If called with no arguments this will return the names of all headers that have
 been set to be sent with the response. Otherwise, this method expects a list of
 headers to add to the response. For example:
 
-    $response->header("Content-Type" => "text/plain");
-    $response->header("Content-Length" => 1234, "X-Foo" => "bar");
+    context->response->header("Content-Type" => "text/plain");
+    context->response->header("Content-Length" => 1234, "X-Foo" => "bar");
 
 If the header has already been set this will add another value to it and the
 response will include the same header multiple times. To replace a header that

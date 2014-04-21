@@ -1,8 +1,7 @@
-NAME
+#Prancer
+Another PSGI Framework
 
-Prancer - Another PSGI Framework
-
-SYNOPSIS
+#Synopsis
 
 Prancer is yet another PSGI framework. This one is designed to be a bit smaller
 and more out of the way than others but it could probably be described best as 
@@ -43,7 +42,16 @@ Here's how it might be used:
     my $foo = config->get("foo");
     config->set("foo", "bar");
 
-INSTALLATION
+Using various plugins, Prancer can also integrate into your application:
+
+* logging
+* templates
+* sessions
+* environment-aware configuration files
+* static files
+
+
+#Installation
 
 To install this module, run the following commands:
 
@@ -60,9 +68,8 @@ These optional libraries will enhance the functionality of Prancer:
 
     DBI
     Template
-    Plack::Middleware::Session
 
-CREDITS
+#Credits
 
 Large portions of this library were taken from the following locations and
 projects:
@@ -79,7 +86,7 @@ projects:
 - Prancer::Database is derived directly from Dancer::Plugin::Database. Thank
   you to David Precious.
 
-COPYRIGHT
+#Copyright
 
 Copyright 2014 Paul Lockaby. All rights reserved.
 
