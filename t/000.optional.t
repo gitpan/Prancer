@@ -8,9 +8,10 @@ use Test::More;
 use version;
 
 my @modules = (
-    { 'Template'                   => '0' },
-    { 'DBI'                        => '0' },
-    { 'DBD::Pg'                    => '0' },
+    { 'DBI'         => '0' },
+    { 'DBD::Pg'     => '0' },
+    { 'DBD::mysql'  => '0' },
+    { 'DBD::SQLite' => '0' },
 );
 
 for (@modules) {

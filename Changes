@@ -11,3 +11,15 @@ Revision history for Perl extension Prancer
 	- Allow default values on session/config gets
 	- Fixing bug in getting all parameters
 
+0.05 Mon Apr 21 06:12:13 UTC 2014
+	- make Plack::Middleware::Session a required module to make tests work, among other things
+	- fix bug that would prevent cookies from being sent with responses
+	- adding headers and cookies to the template
+	- allow setting PLUGIN_BASE on TT plugin
+	- fix TT plugin extension
+	- doc updates
+
+0.06 Sun Apr 27 07:30:27 UTC 2014
+	- removing template code
+	- adding sqlite/mysql connectors
+

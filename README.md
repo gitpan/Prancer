@@ -45,7 +45,6 @@ Here's how it might be used:
 Using various plugins, Prancer can also integrate into your application:
 
 * logging
-* templates
 * sessions
 * environment-aware configuration files
 * static files
@@ -67,7 +66,6 @@ To install from CPAN you can run this simple command:
 These optional libraries will enhance the functionality of Prancer:
 
     DBI
-    Template
 
 #Credits
 

@@ -18,11 +18,11 @@ BEGIN {
     use_ok('Prancer::Logger');
     use_ok('Prancer::Logger::Console');
     use_ok('Prancer::Middleware::Logger');
-    use_ok('Prancer::Template');
-    use_ok('Prancer::Template::TemplateToolkit');
     use_ok('Prancer::Database');
     use_ok('Prancer::Database::Driver');
     use_ok('Prancer::Database::Driver::Pg');
+    use_ok('Prancer::Database::Driver::MySQL');
+    use_ok('Prancer::Database::Driver::SQLite');
     use_ok('Prancer::Session');
     use_ok('Prancer::Session::State::Cookie');
     use_ok('Prancer::Session::Store::Memory');
@@ -30,6 +30,8 @@ BEGIN {
     use_ok('Prancer::Session::Store::Database');
     use_ok('Prancer::Session::Store::Database::Driver');
     use_ok('Prancer::Session::Store::Database::Driver::Pg');
+    use_ok('Prancer::Session::Store::Database::Driver::MySQL');
+    use_ok('Prancer::Session::Store::Database::Driver::SQLite');
 };
 
 done_testing();

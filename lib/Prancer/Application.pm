@@ -12,7 +12,7 @@ use Module::Load ();
 use Router::Boom::Method;
 use Prancer;
 
-our @EXPORT_OK = qw(context mount dispatch config logger database template);
+our @EXPORT_OK = qw(context mount dispatch config logger database);
 our %EXPORT_TAGS = ('all' => [ @EXPORT_OK ]);
 
 sub new {
@@ -59,12 +59,6 @@ sub _logger {
 sub _database {
     my $self = shift;
     return Prancer::database(@_);
-}
-
-## no critic (ProhibitUnusedPrivateSubroutines)
-sub _template {
-    my $self = shift;
-    return Prancer::template(@_);
 }
 
 ## no critic (ProhibitUnusedPrivateSubroutines)
@@ -155,8 +149,8 @@ below should give you everything you need, especially C<context>.
 =head1 EXPORTABLE
 
 The following methods are exportable: C<context>, C<mount>, C<dispatch>,
-C<config>, C<logger>, C<database>, C<template>. They can all be exported at
-once with C<:all>.
+C<config>, C<logger>, and C<database>. They can all be exported at once with
+C<:all>.
 
 =head1 METHODS
 
@@ -179,11 +173,6 @@ application.
 =item database
 
 Passes through to C<Prancer::database>. This is made available for your
-application.
-
-=item template
-
-Passes through to C<Prancer::template>. This is made available for your
 application.
 
 =item context

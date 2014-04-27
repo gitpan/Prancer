@@ -22,28 +22,6 @@ sub env {
     return $self->{'_env'};
 }
 
-sub template {
-    my ($self, $template, $vars) = @_;
-
-    # merge config into the template
-    # for the record: i hate this syntax
-    $vars = Hash::Merge::Simple->merge({'config' => Prancer::config()->as_hashref()}, $vars);
-
-    # merge headers into the template
-    $vars = Hash::Merge::Simple->merge({'headers' => $self->headers}, $vars);
-
-    # merge session into the template
-    $vars = Hash::Merge::Simple->merge({'session' => $self->session->as_hashref()}, $vars);
-
-    # merge cookies into the template
-    $vars = Hash::Merge::Simple->merge({'cookies' => $self->cookies->as_hashref()}, $vars);
-
-    # merge params into the template
-    $vars = Hash::Merge::Simple->merge({'params' => $self->params->as_hashref_mixed()}, $vars);
-
-    return Prancer::template($template, $vars);
-}
-
 sub session {
     my $self = shift;
     return $self->{'_session'};
@@ -178,17 +156,6 @@ pass it to other packages to make it available.
 =item env
 
 Returns the PSGI environment for the request.
-
-=item template
-
-This is a magical wrapper to C<Prancer::template()> in that it works by calling
-C<Prancer::template> but it will merge C<params>, C<config>, and C<session>
-into the list of template variables using their respective names as the first
-key. This allows you to write this in your template:
-
-    <% params.bar %>
-    <% config.foo.bar %>
-    <% session.asdf.fdsa %>
 
 =item session
 
