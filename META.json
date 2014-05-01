@@ -1,5 +1,5 @@
 {
-   "abstract" : "unknown",
+   "abstract" : "A lightweight PSGI framework",
    "author" : [
       "Paul Lockaby <plockaby AT cpan DOT org>"
    ],
@@ -12,7 +12,7 @@
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
       "version" : "2"
    },
-   "name" : "prancer",
+   "name" : "Prancer",
    "no_index" : {
       "directory" : [
          "t",
@@ -37,6 +37,7 @@
             "Hash::MultiValue" : "0",
             "Module::Load" : "0",
             "Plack" : "1.0029",
+            "Plack::Middleware::Session" : "0.21",
             "Router::Boom" : "1.01",
             "Try::Tiny" : "0",
             "URI" : "0",
@@ -44,6 +45,6 @@
          }
       }
    },
-   "release_status" : "testing",
-   "version" : "0.06"
+   "release_status" : "stable",
+   "version" : "0.07"
 }

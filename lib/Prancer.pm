@@ -4,7 +4,7 @@ use strict;
 use warnings FATAL => 'all';
 
 use version;
-our $VERSION = "0.06";
+our $VERSION = "0.07";
 
 use Exporter;
 use parent qw(Exporter);
@@ -230,13 +230,14 @@ sub _enable_static {
 
 =head1 NAME
 
-Prancer - Another PSGI Framework
+Prancer - A lightweight PSGI Framework
+
 
 =head1 SYNOPSIS
 
-Prancer is yet another PSGI framework. This one is designed to be a bit smaller
-and more out of the way than others but it could probably be described best as
-project derived from L<NIH syndrome|https://en.wikipedia.org/wiki/Not_Invented_Here>.
+Prancer is yet another PSGI framework that provides a dispatcher, a persistent
+database connection, session management, a static file dispatcher, and an
+environment aware configuration loading system.
 
 Here's how it might be used:
 

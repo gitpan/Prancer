@@ -1,5 +1,5 @@
 ---
-abstract: unknown
+abstract: A lightweight PSGI framework
 author:
   - 'Paul Lockaby <plockaby AT cpan DOT org>'
 build_requires:
@@ -12,7 +12,7 @@ license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
-name: prancer
+name: Prancer
 no_index:
   directory:
     - t
@@ -23,8 +23,9 @@ requires:
   Hash::MultiValue: 0
   Module::Load: 0
   Plack: 1.0029
+  Plack::Middleware::Session: 0.21
   Router::Boom: 1.01
   Try::Tiny: 0
   URI: 0
   YAML: 0
-version: 0.06
+version: 0.07
