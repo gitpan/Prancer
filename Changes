@@ -26,3 +26,7 @@ Revision history for Perl extension Prancer
 0.07 Thu May  1 21:15:25 UTC 2014
 	- Documentation updates
 	- Moving this out of "test" to make it fully available on CPAN
+
+0.08 Wed May 14 06:18:03 UTC 2014
+	- Fixing bug that would load too many uploads
+

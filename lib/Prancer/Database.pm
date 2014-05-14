@@ -20,7 +20,7 @@ sub load {
     # we can load multiple databases
     my $handles = {};
 
-    foreach my $key (keys %{$config}) {
+    for my $key (keys %{$config}) {
         my $subconfig = $config->{$key};
 
         unless (ref($subconfig) && ref($subconfig) eq "HASH" && $subconfig->{'driver'}) {

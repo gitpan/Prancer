@@ -79,8 +79,8 @@ sub _build_file_list {
     my @exts = Config::Any->extensions();
     my @files = ();
 
-    foreach my $ext (@exts) {
-        foreach my $file (
+    for my $ext (@exts) {
+        for my $file (
             [ $location, "config.${ext}" ],
             [ $location, "${running_env}.${ext}" ]
         ) {

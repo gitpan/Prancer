@@ -4,45 +4,28 @@ use strict;
 use warnings FATAL => 'all';
 
 sub new {
-    my $class = shift;
-    my %args = @_;
-
-    return bless({
-        '_headers'  => $args{'headers'},
-        '_tempname' => $args{'tempname'},
-        '_size'     => $args{'size'},
-        '_filename' => $args{'filename'},
-    }, $class);
+    my ($class, $upload) = @_;
+    return bless({ '_upload' => $upload }, $class);
 }
 
 sub filename {
     my $self = shift;
-    return $self->{'_filename'};
-}
-
-sub headers {
-    my $self = shift;
-    return $self->{'_headers'};
+    return $self->{'_upload'}->filename();
 }
 
 sub size {
     my $self = shift;
-    return $self->{'_size'};
-}
-
-sub tempname {
-    my $self = shift;
-    return $self->{'_tempname'};
+    return $self->{'_upload'}->size();
 }
 
 sub path {
     my $self = shift;
-    return $self->{'_tempname'};
+    return $self->{'_upload'}->path();
 }
 
 sub content_type {
     my $self = shift;
-    return $self->{'_headers'}->content_type(@_);
+    return $self->{'_upload'}->content_type();
 }
 
 sub basename {
@@ -50,7 +33,7 @@ sub basename {
 
     unless (defined($self->{'_basename'})) {
         require File::Spec::Unix;
-        my $basename = $self->{'_filename'};
+        my $basename = $self->{'_upload'}->path();
         $basename =~ s|\\|/|gx;
         $basename = (File::Spec::Unix->splitpath($basename))[2];
         $basename =~ s|[^\w\.-]+|_|gx;

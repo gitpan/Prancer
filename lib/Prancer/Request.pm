@@ -34,7 +34,7 @@ sub _parse_uploads {
     # turn all uploads into Prancer::Upload objects
     my $result = Hash::MultiValue->new();
     my $uploads = $self->{'_request'}->uploads();
-    foreach my $key ($uploads->keys()) {
+    for my $key (keys %{$uploads}) {
         $result->add($key, map { Prancer::Request::Upload->new($_) } $uploads->get_all($key));
     }
 
@@ -49,7 +49,7 @@ sub _parse_cookies {
 
     # translate all cookies
     my @pairs = grep { m/=/x } split(/[;,]\s?/x, $self->{'_env'}->{'HTTP_COOKIE'});
-    foreach my $pair (@pairs) {
+    for my $pair (@pairs) {
         # trim leading and trailing whitespace
         $pair =~ s/^\s+|\s+$//xg;
 
