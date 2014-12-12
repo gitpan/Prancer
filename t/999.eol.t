@@ -18,3 +18,4 @@ try {
 
 Test::EOL->import();
 all_perl_files_ok({ trailing_whitespace => 1, all_reasons => 1 }, qw(lib t));
+

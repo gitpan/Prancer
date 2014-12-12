@@ -3,11 +3,18 @@ package Prancer::Request;
 use strict;
 use warnings FATAL => 'all';
 
+use version;
+our $VERSION = '1.00';
+
 use Plack::Request;
-use Storable qw(dclone);
 use Hash::MultiValue;
 use URI::Escape ();
+use Carp;
+
 use Prancer::Request::Upload;
+
+# even though this *should* work automatically, it was not
+our @CARP_NOT = qw(Prancer Try::Tiny);
 
 sub new {
     my ($class, $env) = @_;
@@ -54,7 +61,7 @@ sub _parse_cookies {
         $pair =~ s/^\s+|\s+$//xg;
 
         my ($key, $value) = map { URI::Escape::uri_unescape($_) } split(/=/x, $pair, 2);
-        $result->add($key, { 'name' => $key, 'value' => $value });
+        $result->add($key, $value);
     }
 
     return $result;
@@ -90,9 +97,14 @@ sub scheme {
     return $self->{'_request'}->scheme();
 }
 
+sub port {
+    my $self = shift;
+    return $self->{'_request'}->port();
+}
+
 sub secure {
     my $self = shift;
-    return $self->{'_request'}->secure();
+    return ($self->{'_request'}->secure() ? 1 : 0);
 }
 
 sub path {
@@ -105,6 +117,11 @@ sub body {
     return $self->{'_request'}->body();
 }
 
+sub content {
+    my $self = shift;
+    return $self->{'_request'}->raw_body();
+}
+
 sub address {
     my $self = shift;
     return $self->{'_request'}->address();
@@ -113,17 +130,6 @@ sub address {
 sub user {
     my $self = shift;
     return $self->{'_request'}->user();
-}
-
-sub header {
-    my $self = shift;
-
-    # return the keys if nothing is asked for
-    return keys(%{$self->headers()}) unless @_;
-
-    my $key = shift;
-    return $self->headers->{$key} unless wantarray;
-    return $self->headers->get_all($key);
 }
 
 sub headers {
@@ -135,10 +141,10 @@ sub param {
     my $self = shift;
 
     # return the keys if nothing is asked for
-    return keys(%{$self->parameters()}) unless @_;
+    return keys %{$self->params()} unless @_;
 
     my $key = shift;
-    return $self->params->{$key} unless wantarray;
+    return $self->params->get($key) unless wantarray;
     return $self->params->get_all($key);
 }
 
@@ -151,10 +157,10 @@ sub cookie {
     my $self = shift;
 
     # return the keys if nothing is asked for
-    return keys(%{$self->cookies()}) unless @_;
+    return keys %{$self->cookies()} unless @_;
 
     my $key = shift;
-    return $self->cookies->{$key} unless wantarray;
+    return $self->cookies->get($key) unless wantarray;
     return $self->cookies->get_all($key);
 }
 
@@ -167,10 +173,10 @@ sub upload {
     my $self = shift;
 
     # return the keys if nothing is asked for
-    return keys(%{$self->uploads()}) unless @_;
+    return keys %{$self->uploads()} unless @_;
 
     my $key = shift;
-    return $self->uploads->{$key} unless wantarray;
+    return $self->uploads->get($key) unless wantarray;
     return $self->uploads->get_all($key);
 }
 
@@ -182,6 +188,12 @@ sub uploads {
 sub uri_for {
     my ($self, $path, $args) = @_;
     my $uri = URI->new($self->base());
+
+    # don't want multiple slashes clouding things up
+    if ($uri->path() =~ /\/$/x && $path =~ /^\//x) {
+        $path = substr($path, 1);
+    }
+
     $uri->path($uri->path() . $path);
     $uri->query_form(@{$args}) if $args;
     return $uri;
@@ -195,22 +207,25 @@ Prancer::Request
 
 =head1 SYNOPSIS
 
-    sub handle {
-        my $self = shift;
+    sub handler {
+        my ($self, $env, $request, $response, $session) = @_;
 
-        my $request = context->request();
-        my $path = $request->path();
-        my $cookie = $request->cookie("foo");
-        my $param = $request->param("bar");
-        my $cookie_names = $request->cookie();
-        my $user_agent = $request->header("user-agent");
+        sub (GET) {
+            my $path         = $request->path();
+            my $cookie       = $request->cookie("foo");
+            my $param        = $request->param("bar");
+            my $cookie_names = $request->cookie();
+            my $user_agent   = $request->headers->header("user-agent");
 
-        ...
+            ...
+
+            return $response->finalize(200);
+        }
     }
 
-=head1 ATTRIBUTES
+=head1 METHODS
 
-=over 4
+=over
 
 =item uri
 
@@ -255,12 +270,6 @@ Returns the IP address of the client (C<REMOTE_ADDR>).
 
 Returns C<REMOTE_USER> if it's set.
 
-=item header
-
-When called with no arguments this will return a list of all header names.
-When called in scalar context this will return the last value for the given
-key. When called in list context this will return all values for the given key.
-
 =item headers
 
 Returns an L<HTTP::Headers> object containing the headers for the current
@@ -270,7 +279,8 @@ request.
 
 When called with no arguments this will return a list of all parameter names.
 When called in scalar context this will return the last value for the given
-key. When called in list context this will return all values for the given key.
+key. When called in list context this will return all values for the given key
+in a list.
 
 =item params
 
@@ -282,12 +292,7 @@ parameters.
 When called with no arguments this will return a list of all cookie names.
 When called in scalar context this will return the last cookie for the given
 key. When called in list context this will return all cookies for the given
-key. A cookie should look like this:
-
-    {
-        'name' => 'foo',
-        'value' => 'bar',
-    }
+key in a list.
 
 =item cookies
 
@@ -309,7 +314,7 @@ Returns an L<Hash::MultiValue> containing all uploads.
 
 Generates a URL to a new location in an easy to use manner. For example:
 
-    my $link = $request->uri_for('/logout', [ signoff => 1 ]);
+    my $link = $request->uri_for("/logout", [ signoff => 1 ]);
 
 =back
 

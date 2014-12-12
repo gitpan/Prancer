@@ -18,3 +18,4 @@ try {
 
 Test::Perl::Critic->import(-profile => 't/perlcriticrc');
 all_critic_ok('lib');
+

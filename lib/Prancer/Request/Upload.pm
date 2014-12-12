@@ -3,6 +3,14 @@ package Prancer::Request::Upload;
 use strict;
 use warnings FATAL => 'all';
 
+use version;
+our $VERSION = '1.00';
+
+use Carp;
+
+# even though this *should* work automatically, it was not
+our @CARP_NOT = qw(Prancer Try::Tiny);
+
 sub new {
     my ($class, $upload) = @_;
     return bless({ '_upload' => $upload }, $class);
@@ -28,21 +36,6 @@ sub content_type {
     return $self->{'_upload'}->content_type();
 }
 
-sub basename {
-    my $self = shift;
-
-    unless (defined($self->{'_basename'})) {
-        require File::Spec::Unix;
-        my $basename = $self->{'_upload'}->path();
-        $basename =~ s|\\|/|gx;
-        $basename = (File::Spec::Unix->splitpath($basename))[2];
-        $basename =~ s|[^\w\.-]+|_|gx;
-        $self->{'_basename'} = $basename;
-    }
-
-    return $self->{'_basename'};
-}
-
 1;
 
 =head1 NAME
@@ -60,17 +53,11 @@ can be used like this:
     </form>
 
     # in the Prancer handler
-    my $upload = context->upload('foo');
-    my $upload = context->request->upload('bar');
-    $upload->size();
-    $upload->path();
-    $upload->content_type();
-    $upload->filename();
-    $upload->basename();
+    my $upload = $request->upload("foo");
 
-=head1 ATTRIBUTES
+=head1 METHODS
 
-=over 4
+=over
 
 =item size
 
@@ -87,10 +74,6 @@ Returns the content type of the uploaded file.
 =item filename
 
 Returns the original filename in the client.
-
-=item basename
-
-Returns basename for "filename".
 
 =back
 

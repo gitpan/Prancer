@@ -33,3 +33,7 @@ Revision history for Perl extension Prancer
 0.09 Tue May 20 05:23:53 UTC 2014
 	- Removing dumb tests
 
+1.00 Fri Dec 12 06:56:57 UTC 2014
+	- Completely rewriting to use Web::Simple for routing.
+	- Removing a lot of extra components and stripping down to just config management, routing, and session management.
+

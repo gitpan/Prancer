@@ -4,514 +4,495 @@ use strict;
 use warnings FATAL => 'all';
 
 use version;
-our $VERSION = "0.09";
+our $VERSION = '1.00';
 
-use Exporter;
-use parent qw(Exporter);
+# using Web::Simple in this context will implicitly make Prancer a subclass of
+# Web::Simple::Application. that will cause a number of things to be imported
+# into the Prancer namespace. see ->import below for more details.
+use Web::Simple 'Prancer';
 
-our @EXPORT_OK = qw(config logger database);
-our %EXPORT_TAGS = ('all' => [ @EXPORT_OK ]);
-
-use Carp;
+use Cwd ();
 use Module::Load ();
-use Storable qw(dclone);
 use Try::Tiny;
+use Carp;
 
-use Prancer::Config;
-use Prancer::Logger;
+use Prancer::Core;
 use Prancer::Request;
 use Prancer::Response;
 use Prancer::Session;
-use Prancer::Context;
+
+# even though this *should* work automatically, it was not
+our @CARP_NOT = qw(Prancer Try::Tiny);
+
+# the list of methods that will be created on the fly, linked to private
+# methods of the same name, and exported to the caller. this makes things like
+# the bareword call to "config" work. this list is populated in ->import
+our @TO_EXPORT = ();
+
+# a super private method
+my $enable_static = sub {
+    my ($self, $app) = @_;
+    return $app unless defined($self->{'_core'}->config());
+
+    my $config = $self->{'_core'}->config->remove('static');
+    return $app unless defined($config);
+
+    try {
+        # this intercepts requests for documents under the configured URL
+        # and checks to see if the requested file exists in the configured
+        # file system path. if it does exist then it is served up. if it
+        # doesn't exist then the request will pass through to the handler.
+        die "no directory is configured for the static file loader\n" unless defined($config->{'dir'});
+        my $dir = Cwd::realpath($config->{'dir'});
+        die "${\$config->{'dir'}} does not exist\n" unless defined($dir);
+        die "${\$config->{'dir'}} is not readable\n" unless (-r $dir);
+
+        # this is the url under which static files will be stored
+        my $path = $config->{'path'} || '/static';
+
+        require Plack::Middleware::Static;
+        $app = Plack::Middleware::Static->wrap($app,
+            'path'         => sub { s/^$path//x },
+            'root'         => $dir,
+            'pass_through' => 1,
+        );
+    } catch {
+        my $error = (defined($_) ? $_ : "unknown");
+        carp "initialization warning generated while trying to load the static file loader: ${error}";
+    };
+
+    return $app;
+};
+
+# a super private method
+my $enable_sessions = sub {
+    my ($self, $app) = @_;
+    return $app unless defined($self->{'_core'}->config());
+
+    my $config = $self->{'_core'}->config->remove("session");
+    return $app unless defined($config);
+
+    try {
+        # load the session state package first
+        # this will probably be a cookie
+        my $state_package = undef;
+        my $state_options = undef;
+        if (ref($config->{'state'}) && ref($config->{'state'}) eq "HASH") {
+            $state_package = $config->{'state'}->{'driver'};
+            $state_options = $config->{'state'}->{'options'};
+        }
+
+        # make sure state options are legit
+        if (defined($state_options) && (!ref($state_options) || ref($state_options) ne "HASH")) {
+            die "session state configuration options are invalid -- expected a HASH\n";
+        }
+
+        # set defaults and then load the state package
+        $state_package ||= "Prancer::Session::State::Cookie";
+        $state_options ||= {};
+        Module::Load::load($state_package);
+
+        # set the default for the cookie name because the plack default is dumb
+        $state_options->{'session_key'} ||= (delete($state_options->{'key'}) || "PSESSION");
+
+        # now load the store package
+        my $store_package = undef;
+        my $store_options = undef;
+        if (ref($config->{'store'}) && ref($config->{'store'}) eq "HASH") {
+            $store_package = $config->{'store'}->{'driver'};
+            $store_options = $config->{'store'}->{'options'};
+        }
+
+        # make sure store options are legit
+        if (defined($store_options) && (!ref($store_options) || ref($store_options) ne "HASH")) {
+            die "session store configuration options are invalid -- expected a HASH\n";
+        }
+
+        # set defaults and then load the store package
+        $store_package ||= "Prancer::Session::Store::Memory";
+        $store_options ||= {};
+        Module::Load::load($store_package);
+
+        require Plack::Middleware::Session;
+        $app = Plack::Middleware::Session->wrap($app,
+            'state' => $state_package->new(%{$state_options}),
+            'store' => $store_package->new(%{$store_options}),
+        );
+    } catch {
+        my $error = (defined($_) ? $_ : "unknown");
+        carp "initialization warning generated while trying to load the session handler: ${error}";
+    };
+
+    return $app;
+};
 
 sub new {
-    my ($class, $config_path, $handler, @args) = @_;
+    my ($class, $configuration_file) = @_;
+    my $self = bless({}, $class);
 
-    # already got an object
-    return $class if ref($class);
+    # the core is where our methods *really* live
+    # we mostly just proxy through to that
+    $self->{'_core'} = Prancer::Core->new($configuration_file);
 
-    # this is a singleton
-    my $instance = undef;
-    {
+    # @TO_EXPORT is an array of arrayrefs representing methods that we want to
+    # make available in our caller's namespace. each arrayref has two values:
+    #
+    #   0 = namespace into which we'll import the method
+    #   1 = the method that will be imported (must be implemented in Prancer::Core)
+    #
+    # this makes "namespace::method" resolve to "$self->{'_core'}->method()".
+    for my $method (@TO_EXPORT) {
+        # don't import things that can't be resolved
+        croak "Prancer::Core does not implement ${\$method->[1]}" unless $self->{'_core'}->can($method->[1]);
+
         no strict 'refs';
-        $instance = \${"$class\::_instance"};
-        return $$instance if defined($$instance);
+        no warnings 'redefine';
+        *{"${\$method->[0]}::${\$method->[1]}"} = sub {
+            my $internal = "${\$method->[1]}";
+            return $self->{'_core'}->$internal(@_);
+        };
     }
 
-    my $self = bless({
-        '_handler' => $handler,    # the name of the class that will implement the handler
-        '_handler_args' => \@args, # any arguments that should be passed to the handler on creation
-    }, $class);
+    # here are things that will always be exported into the Prancer namespace.
+    # this DOES NOT export things things into our children's namespace, only
+    # into the Prancer namespace. this makes things like "$app->config()" work.
+    for my $method (qw(config)) {
+        # don't export things that can't be resolved
+        croak "Prancer::Core does not implement ${\$method->[1]}" unless $self->{'_core'}->can($method);
 
-    # load configuration
-    $self->{'_config'} = Prancer::Config->load($config_path);
+        no strict 'refs';
+        no warnings 'redefine';
+        *{"${\__PACKAGE__}::${method}"} = sub {
+            return $self->{'_core'}->$method(@_);
+        };
+    }
 
-    # load the configured logger
-    $self->{'_logger'} = Prancer::Logger->load($self->{'_config'}->remove('logger'));
-
-    $$instance = $self;
+    $self->initialize();
     return $self;
 }
 
-# return an already created instance of ourselves or croak if one doesn't exist
-sub instance {
-    my $class = __PACKAGE__;
+sub import {
+    my ($class, @options) = @_;
+
+    # store what namespace are importing things to
+    my $namespace = caller(0);
 
     {
+        # this block makes our caller a child class of this class
         no strict 'refs';
-        my $instance = \${"$class\::_instance"};
-        return $$instance if defined($$instance);
+        unshift(@{"${namespace}::ISA"}, __PACKAGE__);
     }
 
-    croak "must create an instance of " . __PACKAGE__ . " before it may be used";
-}
+    # this is used by Web::Simple to not complain about keywords in prototypes
+    # like HEAD and GET. but we need to extend it to classes that implement us
+    # so it is being adding it here, too.
+    warnings::illegalproto->unimport();
 
-sub logger {
-    my $self = instance();
-    return $self->{'_logger'};
-}
+    # keep track of what has been loaded so someone doesn't put the same thing
+    # into the import list in twice.
+    my $loaded = {};
 
-sub config {
-    my $self = instance();
-    return $self->{'_config'};
-}
+    my @actions = ();
+    for my $option (@options) {
+        next if exists($loaded->{$option});
+        $loaded->{$option} = 1;
 
-sub database {
-    my $self = instance();
-    my $connection = shift || "default";
+        # these options will be exported as proxies to real methods
+        if ($option =~ /^(config)$/x) {
+            no strict 'refs';
 
-    # if the database object hasn't been initialized do it now
-    # this will make this work well with CLI apps
-    require Prancer::Database;
-    $self->{'_database'} = Prancer::Database->load(config->remove('database')) unless defined($self->{'_database'});
+            # need to predefine the exported method so that barewords work
+            *{"${\__PACKAGE__}::${1}"} = *{"${namespace}::${1}"} = sub { return; };
 
-    if (!defined($connection)) {
-        logger->fatal("could not get connection to database: no connection name given");
-        croak;
+            # this will tell ->new() to create the actual method
+            push(@TO_EXPORT, [ $namespace, $1 ]);
+
+            next;
+        }
+
+        croak "${option} is not exported by the ${\__PACKAGE__} package";
     }
-    if (!exists($self->{'_database'}->{$connection})) {
-        logger->fatal("could not get connection to database: no connection named '${connection}'");
-        croak;
-    }
 
-    return $self->{'_database'}->{$connection}->handle();
+    return;
 }
 
-sub run {
+sub to_psgi_app {
     my $self = shift;
 
-    try {
-        Module::Load::load($self->{'_handler'});
-    } catch {
-        logger->fatal("could not initialize handler: " . (defined($_) ? $_ : "unknown"));
-        croak;
-    };
+    # get the PSGI app from Web::Simple and wrap middleware around it
+    my $app = $self->SUPER::to_psgi_app();
 
-    # pre-load the database engine
-    require Prancer::Database;
-    $self->{'_database'} = Prancer::Database->load(config->remove('database'));
+    # enable static document loading
+    $app = $enable_static->($self, $app);
 
-    my $app = sub {
-        my $env = shift;
-
-        # create a context to pass to the request
-        my $context = Prancer::Context->new(
-            'env'      => $env,
-            'request'  => Prancer::Request->new($env),
-            'response' => Prancer::Response->new($env),
-            'session'  => Prancer::Session->new($env),
-        );
-
-        my $handler = $self->{'_handler'};
-        my $copy = $handler->new($context, @{$self->{'_handler_args'}});
-        return $copy->handle($env);
-    };
-
-    # capture warnings and logging messages and send them to the configured logger
-    require Prancer::Middleware::Logger;
-    $app = Prancer::Middleware::Logger->wrap($app);
-
-    # enable user sessions
-    $app = $self->_enable_sessions($app);
-
-    # serve up static files if configured to do so
-    $app = $self->_enable_static($app);
+    # enable sessions
+    $app = $enable_sessions->($self, $app);
 
     return $app;
 }
 
-sub _enable_sessions {
-    my ($self, $app) = @_;
+# NOTE: your program can definitely implement ->dispatch_request instead of
+# ->handler but ->handler will give you easier access to request and response
+# data using Prancer::Request and Prancer::Response.
+sub dispatch_request {
+    my ($self, $env) = @_;
 
-    my $config = config->remove('session');
-    if ($config) {
-        try {
-            # load the session state module first
-            # this will probably be a cookie
-            my $state_module = undef;
-            my $state_options = undef;
-            if (ref($config->{'state'}) && ref($config->{'state'}) eq "HASH") {
-                $state_module = $config->{'state'}->{'driver'};
-                $state_options = $config->{'state'}->{'options'};
-            }
+    my $request = Prancer::Request->new($env);
+    my $response = Prancer::Response->new($env);
+    my $session = Prancer::Session->new($env);
 
-            # set defaults and then load the state module
-            $state_options ||= {};
-            $state_module ||= "Prancer::Session::State::Cookie";
-            Module::Load::load($state_module);
-
-            # set the default for the session name because the plack
-            # default is stupid
-            $state_options->{'session_key'} ||= "PSESSION";
-
-            # load the store module second
-            my $store_module = undef;
-            my $store_options = undef;
-            if (ref($config->{'store'}) && ref($config->{'store'}) eq "HASH") {
-                $store_module = $config->{'store'}->{'driver'};
-                $store_options = $config->{'store'}->{'options'};
-            }
-
-            # set defaults and then load the store module
-            $store_options ||= {};
-            $store_module ||= "Prancer::Session::Store::Memory";
-            Module::Load::load($store_module);
-
-            require Plack::Middleware::Session;
-            $app = Plack::Middleware::Session->wrap($app,
-                'state' => $state_module->new($state_options),
-                'store' => $store_module->new($store_options),
-            );
-            logger->info("initialized session handler with state module ${state_module} and store module ${store_module}");
-        } catch {
-            my $error = (defined($_) ? $_ : "unknonw");
-            logger->warn("could not initialize session handler: initialization error: ${error}");
-        };
-    } else {
-        logger->warn("could not initialize session handler: no session handler configured");
-    }
-
-    return $app;
+    return $self->handler($env, $request, $response, $session);
 }
 
-sub _enable_static {
-    my ($self, $app) = @_;
+sub handler {
+    croak "->handler must be implemented in child class";
+}
 
-    my $config = config->remove('static');
-    if ($config) {
-        try {
-            # this intercepts requests for /static/* and checks to see if
-            # the requested file exists in the configured path. if it does
-            # it is served up. if it doesn't then the request will pass
-            # through to the handler.
-            die "no path is configured\n" unless defined($config->{'path'});
-            my $path = Cwd::realpath($config->{'path'});
-            die $config->{'path'} . " does not exist\n" unless defined($path);
-            die $config->{'path'} . " is not readable\n" unless (-r $path);
-
-            require Plack::Middleware::Static;
-            $app = Plack::Middleware::Static->wrap($app,
-                'path' => sub { s!^/static/!!x },
-                'root' => $path,
-                'pass_through' => 1,
-            );
-            logger->info("serving static files from ${path} at /static");
-        } catch {
-            logger->warn("could not initialize static file loader: initialization error: $_");
-        };
-    } else {
-        logger->warn("could not initialize static file loader: not configured");
-    }
-
-    return $app;
+sub initialize {
+    return;
 }
 
 1;
 
 =head1 NAME
 
-Prancer - A lightweight PSGI Framework
-
+Prancer
 
 =head1 SYNOPSIS
 
-Prancer is yet another PSGI framework that provides a dispatcher, a persistent
-database connection, session management, a static file dispatcher, and an
-environment aware configuration loading system.
+When using as part of a web application:
 
-Here's how it might be used:
-
-    ==> myapp.psgi
-
-    use Prancer;
-    my $app = Prancer->new("/path/to/confdir", "MyApp");
-    $app->run();
-
-    ==> MyApp.pm
-
-    package MyApp;
-
-    use Prancer::Application qw(:all);
-    use parent qw(Prancer::Application);
-
-    sub handle {
-        my $self = shift;
-
-        mount('GET', '/', sub {
-            context->header(set => 'Content-Type', value => 'text/plain');
-            context->body("hello world");
-            context->finalize(200);
-        });
-
-        return dispatch;
-    }
-
-Full documentation can be found in L<Prancer::Manual>.
-
-=head1 INSTALLATION
-
-To install this module, run the following commands:
-
-    perl Makefile.PL
-    make
-    make test
-    make install
-
-If this ever makes it to CPAN you can install it with this simple command:
-
-    perl -MCPAN -e 'install Prancer'
-
-These optional libraries will enhance the functionality of Prancer:
-
-=over 4
-
-=item L<DBI>
-
-Without this the Prancer database interface will not work. You also will need
-a database driver like L<DBD::Pg>.
-
-=item L<Plack::Middleware::Session>
-
-Without this the Prancer session support will not work. If you want to use the
-YAML session storage you will also need to have L<YAML> (preferably
-L<YAML::XS>) installed. If you want support to write sessions do the database
-you will also need L<DBI> installed along with a database driver like
-L<DBD::Pg>.
-
-=back
-
-=head1 EXPORTABLE
-
-The following methods are exportable: C<config>, C<logger>, and C<database>.
-They can all be exported at once using C<:all>.
-
-=head1 METHODS
-
-With the exception of C<-E<gt>new> and C<-E<gt>run>, all methods should be
-called in a static context. Additionally, with the same exception, all methods
-are exportable individually or with C<qw(:all)>.
-
-=over 4
-
-=item ->new CONFIG PACKAGE ARGS
-
-This will create your application. It takes two arguments:
-
-=over 4
-
-=item CONFIG
-
-This a path to a directory containing configuration files. How configuration
-files are loaded is detailed below.
-
-=item PACKAGE
-
-This is the name of a package that implements your application. The package
-named should extend L<Prancer::Application> though this is not enforced.
-
-=item ARGS
-
-After the name of the package, any number of arguments may be added. Any extra
-arguments are passed directly to the C<new> method on the named package when it
-is created for a request.
-
-=back
-
-=item ->run
-
-This starts your application. It takes no arguments.
-
-=item logger
-
-This gives access to the logger. For example:
-
-    logger->info("Hello");
-    logger->fatal("uh oh");
-    logger->debug("here we are");
-
-=item config
-
-This gives access to the configuration. For example:
-
-    config->has('foo');
-    config->get('foo');
-    config->get('foo', 'some default value if foo does not exist');
-    config->set('foo', 'bar');
-    config->remove('foo');
-
-Any changes to the configuration do not persist back to the actual
-configuration file. Additionally they do not persist between threads or
-processes.
-
-Whenever this method is used to get a configuration option and that option
-is reference, the reference will be cloned by Storable to prevent changes to
-one copy from affecting other uses. But this could have performance
-implications if you are routinely getting large data structures out if your
-configuration files.
-
-=item database
-
-This gives access to the configured databases. For example:
-
-    # handle to the database configured as 'default'
-    my $dbh = database;
-
-    # handle to the database configured as 'foo'
-    my $dbh = database('foo');
-
-    # prepare a statement on connection 'default'
-    my $sth = database->prepare("SELECT * FROM foo");
-
-In all cases, C<$dbh> will be a reference to a L<DBI> handle and anything that
-can be done with L<DBI> can be done here.
-
-If no databases are configured then this method will always return C<undef>.
-
-=back
-
-=head1 CONFIGURATION
-
-One doesn't need to create any configuration to use Prancer but then Prancer
-wouldn't be very useful. Prancer uses L<Config::Any> to process configuration
-files so anything supported by that will be supported by this. It will load
-configuration files from given path set when your application initialized.
-First it will look for a file named C<config.ext> where C<ext> is something
-like C<yml> or C<ini>. Then it will look for a file named after the current
-environment like C<develoment.ext> or C<production.ext>. The environment is
-derived by looking first for an environment variable called C<ENVIRONMENT>,
-then for an environment variable called C<PLACK_ENV>. If neither of those exist
-then the default is C<development>. Configuration files will be merged such
-that the environment configuration file will take precedence over the global
-configuration file.
-
-Arbitrary configuration directives can be put into your configuration files
-and they can be accessed like this:
-
-    config->get('foo');
-
-The configuration accessors will only give you configuration directives found
-at the root of the configuration file. So if you use any data structures you
-will have to decode them yourself. For example, if you create a YAML file like
-this:
-
-    foo:
-        bar1: asdf
-        bar2: fdsa
-
-Then you will only be able to get the value to C<bar1> like this:
-
-    my $foo = config->get('foo')->{'bar1'};
-
-=head2 Reserved Configuration Options
-
-To support the components of Prancer, these keys are used:
-
-=over 4
-
-=item logger
-
-Configures the logging system. For example:
-
-    logger:
-        driver: Prancer::Logger::WhateverLogger
-        options:
-            level: debug
-
-For the console logger, see L<Prancer::Logger::Console> for more options.
-
-=item database
-
-Configures database connections. For example:
-
-    database:
-        default:
-            driver: Prancer::Database::Driver::WhateverDriver
-            options:
-                username: test
-                password: test
-                database: test
-
-See L<Prancer::Database> for more options.
-
-=item session
-
-Configures the session handler. For example:
+    ===> foobar.yml
 
     session:
         state:
             driver: Prancer::Session::State::Cookie
             options:
-                key: PSESSION
+                session_key: PSESSION
         store:
-            driver: Prancer::Session::Store::YAML
+            driver: Prancer::Session::Store::Storable
             options:
-                path: /tmp/prancer/sessions
-
-See L<Prancer::Session::State::Cookie>, L<Prancer::Session::Store::Memory>,
-L<Prancer::Session::Store::YAML> and L<Prancer::Session::Store::Database> for
-more options.
-
-=item static
-
-Configures a directory where static documents can be found and served using
-L<Plack::Middleware::Static>. For example:
+                dir: /tmp/prancer/sessions
 
     static:
-        path: /srv/www/site/static
+        path: /static
+        dir: /srv/www/resources
 
-The only configuration option for static documents is C<path>. If this path
-is not defined your application will not start. If this path does not point
-to a directory that is readable your application will not start.
+    ===> myapp.psgi
 
-=back
+    #!/usr/bin/env perl
+
+    use strict;
+    use warnings;
+    use Plack::Runner;
+
+    # this just returns a PSGI application. $x can be wrapped with additional
+    # middleware before sending it along to Plack::Runner.
+    my $x = MyApp->new("/path/to/foobar.yml")->to_psgi_app();
+
+    # run the psgi app through Plack and send it everything from @ARGV. this
+    # way Plack::Runner will get options like what listening port to use and
+    # application server to use -- Starman, Twiggy, etc.
+    my $runner = Plack::Runner->new();
+    $runner->parse_options(@ARGV);
+    $runner->run($x);
+
+    ===> MyApp.pm
+
+    package MyApp;
+
+    use strict;
+    use warnings;
+
+    use Prancer qw(config);
+
+    sub initialize {
+        my $self = shift;
+
+        # in here we can initialize things like plugins
+        # but this method is not required to be implemented
+
+        return;
+    }
+
+    sub handler {
+        my ($self, $env, $request, $response, $session) = @_;
+
+        sub (GET + /) {
+            $response->header("Content-Type" => "text/plain");
+            $response->body("Hello, world!");
+            return $response->finalize(200);
+        }, sub (GET + /foo) {
+            $response->header("Content-Type" => "text/plain");
+            $response->body(sub {
+                my $writer = shift;
+                $writer->write("Hello, world!");
+                $writer->close();
+                return;
+            });
+        }
+    }
+
+    1;
+
+If you save the above snippet as C<myapp.psgi> and run it like this:
+
+    plackup myapp.psgi
+
+You will get "Hello, world!" in your browser. Or you can use Prancer as part of
+a standalone command line application:
+
+    #!/usr/bin/env perl
+
+    use strict;
+    use warnings;
+
+    use Prancer::Core qw(config);
+
+    # the advantage to using Prancer in a standalone application is the ability
+    # to use a standard configuration and to load plugins for things like
+    # loggers and database connectors and template engines.
+    my $x = Prancer::Core->new("/path/to/foobar.yml");
+    print "Hello, world!;
+
+=head1 DESCRIPTION
+
+L<Prancer> is yet another PSGI framework that provides routing and session
+management as well as plugins for logging, database access, and template
+engines. It does this by wrapping L<Web::Simple> to handle routing and by
+wrapping other libraries to bring easy access to things that need to be done in
+web applications.
+
+There are two parts to using Prancer for a web application: a package to
+contain your application and a script to call your application. Both are
+necessary.
+
+Your package should contain a line like this:
+
+    use Prancer;
+
+This sets up your package such that it inherits from L<Prancer>. It also means
+that your package must implement the C<handler> method and optionally implement
+the C<initialize> method. As L<Prancer> inherits from L<Web::Simple> this will
+also automatically enable the C<strict> and C<warnings> pragmas.
+
+As mentioned, putting C<use Prancer;> at the top of your package will require
+you to implement the C<handler> method, like this:
+
+    sub handler {
+        my ($self, $env, $request, $response, $session) = @_;
+
+        # routing goes in here.
+        # see Web::Simple for documentation on writing routing rules.
+        sub (GET + /) {
+            $response->header("Content-Type" => "text/plain");
+            $response->body("Hello, world!");
+            return $response->finalize(200);
+        }
+    }
+
+The C<$request> variable is a L<Prancer::Request> object. The C<$response>
+variable is a L<Prancer::Response> object. The C<$session> variable is a
+L<Prancer::Session> object. If there is no configuration for sessions in any of
+your configuration files then C<$session> will be C<undef>.
+
+You may implement your own C<new> method in your package that uses L<Prancer>
+but you B<MUST> call C<$class-E<gt>SUPER::new(@_);> to get the configuration
+file loaded and any methods exported. As an alternative to implemeting C<new>
+and remembering to call C<SUPER::new>, Prancer will make a call to
+C<-E<gt>initialize> at the end of its own implementation of C<new> so things
+that you might put in C<new> can instead be put into C<initialize>, like this:
+
+    sub initialize {
+        my $self = shift;
+
+        # this is where you can initialize things when your package is created
+
+        return;
+    }
+
+By default, L<Prancer> does not export anything into your package's namespace.
+However, that doesn't mean that there is not anything that it I<could> export
+were one to ask:
+
+    use Prancer qw(config);
+
+Importing C<config> will make the keyword C<config> available which gives
+access to any configuration options loaded by L<Prancer>.
+
+The second part of the L<Prancer> equation is the script that creates and calls
+your package. This can be a pretty small and standard little script, like this:
+
+    my $myapp = MyApp->new("/path/to/foobar.yml")
+    my $psgi = $myapp->to_psgi_app();
+
+C<$myapp> is just an instance of your package. You can pass to C<new> either
+one specific configuration file or a directory containing lots of configuration
+files. The functionality is documented in C<Prancer::Config>.
+
+C<$psgi> is just a PSGI app that you can send to L<Plack::Runner> or whatever
+you use to run PSGI apps. You can also wrap middleware around C<$app>.
+
+    my $psgi = $myapp->to_psgi_app();
+    $psgi = Plack::Middleware::Runtime->wrap($psgi);
+
+=head1 CONFIGURATION
+
+L<Prancer> needs a configuration file. Ok, it doesn't I<need> a configuration
+file. By default, L<Prancer> does not require any configuration. But it is less
+useful without one. You I<could> always create your application like this:
+
+    my $app = MyApp->new->to_psgi_app();
+
+How L<Prancer> loads configuration files is documented in L<Prancer::Config>.
+Anything you put into your configuration file is available to your application
+but there are two exceptions to that rule. The key C<session> will configure
+Prancer's session as documented in L<Prancer::Session>. The key C<static> will
+configure static file loading through L<Plack::Middleware::Static>. These
+configuration items are not made available to your application.
+
+To configure static file loading you can add this to your configuration file:
+
+    static:
+        path: /static
+        dir: /path/to/my/resources
+
+The C<dir> option is required to indicate the root directory for your static
+resources. The C<path> option indicates the web path to link to your static
+resources. If no path is not provided then static files can be accessed under
+C</static> by default.
 
 =head1 CREDITS
 
-Large portions of this library were taken from the following locations and
-projects:
+This module could have been written except on the shoulders of the following
+giants:
 
-=over 4
-
-=item
-
-HTTP status code documentation taken from L<Wikipedia|http://www.wikipedia.org>.
+=over
 
 =item
 
-L<Prancer::Config> is derived directly from L<Dancer2::Core::Role::Config>.
-Thank you to the L<Dancer2|https://github.com/PerlDancer/Dancer2> team.
+The name "Prancer" is a riff on the popular PSGI framework L<Dancer> and
+L<Dancer2>. L<Prancer::Config> is derived directly from
+L<Dancer2::Core::Role::Config>. Thank you to the
+L<Dancer2|https://github.com/PerlDancer/Dancer2> team.
 
 =item
 
-L<Prancer::Request>, L<Prancer::Request::Upload> and L<Prancer::Response> are
-but thin wrappers to and reimplementations of L<Plack::Request>,
-L<Plack::Request::Upload> and L<Prancer::Response>. Thank you to Tatsuhiko
+L<Prancer::Database> is derived from L<Dancer::Plugin::Database>. Thank you to
+David Precious.
+
+=item
+
+L<Prancer::Request>, L<Prancer::Request::Upload>, L<Prancer::Response>,
+L<Prancer::Session> and the session packages are but thin wrappers with minor
+modifications to L<Plack::Request>, L<Plack::Request::Upload>,
+L<Plack::Response>, and L<Plack::Middleware::Session>. Thank you to Tatsuhiko
 Miyagawa.
 
 =item
 
-L<Prancer::Database> is derived directly from L<Dancer::Plugin::Database>.
-Thank you to David Precious.
+The entire routing functionality of this module is offloaded to L<Web::Simple>.
+Thank you to Matt Trout for some great code that I am able to easily leverage.
 
 =back
 
@@ -521,5 +502,14 @@ Copyright 2013, 2014 Paul Lockaby. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+=over
+
+=item L<Plack>
+=item L<Web::Simple>
+
+=back
 
 =cut

@@ -14,9 +14,9 @@ allow = refs
 [TestingAndDebugging::ProhibitNoWarnings]
 allow = redefine
 
-[Variables::ProhibitPackageVars]
-add_packages = DBI
-
 [NamingConventions::ProhibitAmbiguousNames]
 forbid = close last
+
+[Modules::ProhibitExcessMainComplexity]
+max_mccabe = 30
 
