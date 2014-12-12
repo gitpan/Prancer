@@ -37,3 +37,6 @@ Revision history for Perl extension Prancer
 	- Completely rewriting to use Web::Simple for routing.
 	- Removing a lot of extra components and stripping down to just config management, routing, and session management.
 
+1.01 Fri Dec 12 15:11:36 UTC 2014
+	- Changing status so that this actually gets indexed by CPAN
+

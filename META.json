@@ -46,6 +46,6 @@
          }
       }
    },
-   "release_status" : "experimental",
-   "version" : "1.00"
+   "release_status" : "stable",
+   "version" : "1.01"
 }
