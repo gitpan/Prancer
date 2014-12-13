@@ -4,7 +4,7 @@ use strict;
 use warnings FATAL => 'all';
 
 use version;
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 use Plack::Session::Store::File;
 use parent qw(Plack::Session::Store::File);

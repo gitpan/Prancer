@@ -41,11 +41,10 @@
             "YAML" : "0",
             "Hash::MultiValue" : "0",
             "URI" : "0",
-            "warnings::illegalproto" : "0",
-            "perl" : "5.010"
+            "warnings::illegalproto" : "0"
          }
       }
    },
    "release_status" : "stable",
-   "version" : "1.01"
+   "version" : "1.02"
 }

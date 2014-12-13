@@ -101,9 +101,9 @@ a standalone command line application:
 
 # DESCRIPTION
 
-[Prancer](https://metacpan.org/pod/Prancer) is yet another PSGI framework that
-provides routing and session management as well as plugins for logging,
-database access, and template engines. It does this by wrapping
+Prancer is yet another PSGI framework that provides routing and session
+management as well as plugins for logging, database access, and template
+engines. It does this by wrapping
 [Web::Simple](https://metacpan.org/pod/Web::Simple) to handle routing and by
 wrapping other libraries to bring easy access to things that need to be done in
 web applications.
@@ -112,15 +112,15 @@ There are two parts to using Prancer for a web application: a package to
 contain your application and a script to call your application. Both are
 necessary.
 
-Your package should contain a line like this:
+The package containing your application should contain a line like this:
 
     use Prancer;
 
-This sets up your package such that it inherits from Prancer. It also means
-that your package must implement the `handler` method and optionally implement
-the `initialize` method. As Prancer inherits from
-[Web::Simple](https://metacpan.org/pod/Web::Simple) this will also
-automatically enable the `strict` and `warnings` pragmas.
+This modifies your application package such that it inherits from Prancer. It
+also means that your package must implement the `handler` method and
+optionally implement the `initialize` method. As Prancer inherits from
+Web::Simple it will also automatically enable the `strict` and `warnings`
+pragmas.
 
 As mentioned, putting `use Prancer;` at the top of your package will require
 you to implement the `handler` method, like this:
@@ -146,12 +146,12 @@ The `$request` variable is a
 is no configuration for sessions in any of your configuration files then
 `$session` will be `undef`.
 
-You may implement your own `new` method in your package that uses Prancer but
-you **MUST** call `$class->SUPER::new(@_);` to get the configuration file
-loaded and any methods exported. As an alternative to implemeting `new` and
-remembering to call `SUPER::new`, Prancer will make a call to `->initialize` at
-the end of its own implementation of `new` so things that you might put in
-`new` can instead be put into `initialize`, like this:
+You may implement your own `new` method in your application but you **MUST**
+call `$class->SUPER::new(@_);` to get the configuration file loaded and
+any methods exported. As an alternative to implemeting `new` and remembering
+to call `SUPER::new`, Prancer will make a call to `->initialize` at the
+end of its own implementation of `new` so things that you might put in `new`
+can instead be put into `initialize`, like this:
 
     sub initialize {
         my $self = shift;
@@ -189,20 +189,21 @@ run PSGI apps. You can also wrap middleware around `$app`.
 
 # CONFIGURATION
 
-Prancer needs a configuration file. Ok, it doesn't _need_ a configuration file.
-By default, Prancer does not require any configuration. But it is less useful
-without one. You _could_ always create your application like this:
+Prancer needs a configuration file. Ok, it doesn't _need_ a configuration file
+file. By default, Prancer does not require any configuration. But it is less
+useful without one. You _could_ always create your application like this:
 
     my $app = MyApp->new->to_psgi_app();
 
 How Prancer loads configuration files is documented in
 [Prancer::Config](https://metacpan.org/pod/Prancer::Config). Anything you put
-into your configuration file is available to your application but there are two
-exceptions to that rule. The key `session` will configure Prancer's session as
-documented in [Prancer::Session](https://metacpan.org/pod/Prancer::Session).
-The key `static` will configure static file loading through
+into your configuration file is available to your application.
+
+There are two special configuration keys reserved by Prancer. The key
+`session` will configure Prancer's session as documented in
+[Prancer::Session](https://metacpan.org/pod/Prancer::Session). The key `static`
+will configure static file loading through
 [Plack::Middleware::Static](https://metacpan.org/pod/Plack::Middleware::Static).
-These configuration items are not made available to your application.
 
 To configure static file loading you can add this to your configuration file:
 
@@ -220,7 +221,7 @@ resources. If no path is not provided then static files can be accessed under
 This module could have been written except on the shoulders of the following
 giants:
 
-- The name "Prancer" is a riff on the popular PSGI framework [Dancer](https://metacpan.org/pod/Dancer) and [Dancer2](https://metacpan.org/pod/Dancer2). [Prancer::Config](https://metacpan.org/pod/Prancer::Config) is derived directly from [Dancer2::Core::Role::Config](https://metacpan.org/pod/Dancer2::Core::Role::Config). Thank you to the Dancer/Dancer2 team.
+- The name "Prancer" is a riff on the popular PSGI framework [Dancer](https://metacpan.org/pod/Dancer) and [Dancer2](https://metacpan.org/pod/Dancer2). [Prancer::Config](https://metacpan.org/pod/Prancer::Config) is derived directly from [Dancer2::Core::Role::Config](https://metacpan.org/pod/Dancer2::Core::Role::Config). Thank you to the Dancer/Dancer2 teams.
 - [Prancer::Database](https://metacpan.org/pod/Prancer::Database) is derived from [Dancer::Plugin::Database](https://metacpan.org/pod/Dancer::Plugin::Database). Thank you to David Precious.
 - [Prancer::Request](https://metacpan.org/pod/Prancer::Request), [Prancer::Request::Upload](https://metacpan.org/pod/Prancer::Request::Upload), [Prancer::Response](https://metacpan.org/pod/Prancer::Response), [Prancer::Session](https://metacpan.org/pod/Prancer::Session) and the session packages are but thin wrappers with minor modifications to [Plack::Request](https://metacpan.org/pod/Plack::Request), [Plack::Request::Upload](https://metacpan.org/pod/Plack::Request::Upload), [Plack::Response](https://metacpan.org/pod/Plack::Response), and [Plack::Middleware::Session](https://metacpan.org/pod/Plack::Middleware::Session). Thank you to Tatsuhiko Miyagawa.
 - The entire routing functionality of this module is offloaded to [Web::Simple](https://metacpan.org/pod/Web::Simple). Thank you to Matt Trout for some great code that I am able to easily leverage.
@@ -236,3 +237,4 @@ the same terms as Perl itself.
 
 - [Plack](https://metacpan.org/pod/Plack)
 - [Web::Simple](https://metacpan.org/pod/Web::Simple)
+

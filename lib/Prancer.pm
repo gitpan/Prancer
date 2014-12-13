@@ -4,7 +4,7 @@ use strict;
 use warnings FATAL => 'all';
 
 use version;
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 # using Web::Simple in this context will implicitly make Prancer a subclass of
 # Web::Simple::Application. that will cause a number of things to be imported
@@ -34,7 +34,7 @@ my $enable_static = sub {
     my ($self, $app) = @_;
     return $app unless defined($self->{'_core'}->config());
 
-    my $config = $self->{'_core'}->config->remove('static');
+    my $config = $self->{'_core'}->config->get('static');
     return $app unless defined($config);
 
     try {
@@ -69,7 +69,7 @@ my $enable_sessions = sub {
     my ($self, $app) = @_;
     return $app unless defined($self->{'_core'}->config());
 
-    my $config = $self->{'_core'}->config->remove("session");
+    my $config = $self->{'_core'}->config->get('session');
     return $app unless defined($config);
 
     try {
@@ -357,7 +357,7 @@ a standalone command line application:
 
 =head1 DESCRIPTION
 
-L<Prancer> is yet another PSGI framework that provides routing and session
+Prancer is yet another PSGI framework that provides routing and session
 management as well as plugins for logging, database access, and template
 engines. It does this by wrapping L<Web::Simple> to handle routing and by
 wrapping other libraries to bring easy access to things that need to be done in
@@ -367,14 +367,15 @@ There are two parts to using Prancer for a web application: a package to
 contain your application and a script to call your application. Both are
 necessary.
 
-Your package should contain a line like this:
+The package containing your application should contain a line like this:
 
     use Prancer;
 
-This sets up your package such that it inherits from L<Prancer>. It also means
-that your package must implement the C<handler> method and optionally implement
-the C<initialize> method. As L<Prancer> inherits from L<Web::Simple> this will
-also automatically enable the C<strict> and C<warnings> pragmas.
+This modifies your application package such that it inherits from Prancer. It
+also means that your package must implement the C<handler> method and
+optionally implement the C<initialize> method. As Prancer inherits from
+Web::Simple it will also automatically enable the C<strict> and C<warnings>
+pragmas.
 
 As mentioned, putting C<use Prancer;> at the top of your package will require
 you to implement the C<handler> method, like this:
@@ -396,12 +397,12 @@ variable is a L<Prancer::Response> object. The C<$session> variable is a
 L<Prancer::Session> object. If there is no configuration for sessions in any of
 your configuration files then C<$session> will be C<undef>.
 
-You may implement your own C<new> method in your package that uses L<Prancer>
-but you B<MUST> call C<$class-E<gt>SUPER::new(@_);> to get the configuration
-file loaded and any methods exported. As an alternative to implemeting C<new>
-and remembering to call C<SUPER::new>, Prancer will make a call to
-C<-E<gt>initialize> at the end of its own implementation of C<new> so things
-that you might put in C<new> can instead be put into C<initialize>, like this:
+You may implement your own C<new> method in your application but you B<MUST>
+call C<$class-E<gt>SUPER::new(@_);> to get the configuration file loaded and
+any methods exported. As an alternative to implemeting C<new> and remembering
+to call C<SUPER::new>, Prancer will make a call to C<-E<gt>initialize> at the
+end of its own implementation of C<new> so things that you might put in C<new>
+can instead be put into C<initialize>, like this:
 
     sub initialize {
         my $self = shift;
@@ -411,16 +412,16 @@ that you might put in C<new> can instead be put into C<initialize>, like this:
         return;
     }
 
-By default, L<Prancer> does not export anything into your package's namespace.
+By default, Prancer does not export anything into your package's namespace.
 However, that doesn't mean that there is not anything that it I<could> export
 were one to ask:
 
     use Prancer qw(config);
 
 Importing C<config> will make the keyword C<config> available which gives
-access to any configuration options loaded by L<Prancer>.
+access to any configuration options loaded by Prancer.
 
-The second part of the L<Prancer> equation is the script that creates and calls
+The second part of the Prancer equation is the script that creates and calls
 your package. This can be a pretty small and standard little script, like this:
 
     my $myapp = MyApp->new("/path/to/foobar.yml")
@@ -438,18 +439,19 @@ you use to run PSGI apps. You can also wrap middleware around C<$app>.
 
 =head1 CONFIGURATION
 
-L<Prancer> needs a configuration file. Ok, it doesn't I<need> a configuration
-file. By default, L<Prancer> does not require any configuration. But it is less
+Prancer needs a configuration file. Ok, it doesn't I<need> a configuration
+file. By default, Prancer does not require any configuration. But it is less
 useful without one. You I<could> always create your application like this:
 
     my $app = MyApp->new->to_psgi_app();
 
-How L<Prancer> loads configuration files is documented in L<Prancer::Config>.
-Anything you put into your configuration file is available to your application
-but there are two exceptions to that rule. The key C<session> will configure
-Prancer's session as documented in L<Prancer::Session>. The key C<static> will
-configure static file loading through L<Plack::Middleware::Static>. These
-configuration items are not made available to your application.
+How Prancer loads configuration files is documented in L<Prancer::Config>.
+Anything you put into your configuration file is available to your application.
+
+There are two special configuration keys reserved by Prancer. The key
+C<session> will configure Prancer's session as documented in
+L<Prancer::Session>. The key C<static> will configure static file loading
+through L<Plack::Middleware::Static>.
 
 To configure static file loading you can add this to your configuration file:
 
@@ -473,8 +475,7 @@ giants:
 
 The name "Prancer" is a riff on the popular PSGI framework L<Dancer> and
 L<Dancer2>. L<Prancer::Config> is derived directly from
-L<Dancer2::Core::Role::Config>. Thank you to the
-L<Dancer2|https://github.com/PerlDancer/Dancer2> team.
+L<Dancer2::Core::Role::Config>. Thank you to the Dancer/Dancer2 teams.
 
 =item
 
