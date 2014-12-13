@@ -4,7 +4,7 @@ use strict;
 use warnings FATAL => 'all';
 
 use version;
-our $VERSION = '1.02';
+our $VERSION = '1.04';
 
 use Plack::Session::State::Cookie;
 use parent qw(Plack::Session::State::Cookie);
