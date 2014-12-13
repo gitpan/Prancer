@@ -40,5 +40,5 @@ Revision history for Perl extension Prancer
 1.01 Fri Dec 12 15:11:36 UTC 2014
 	- Changing status so that this actually gets indexed by CPAN
 
-1.02 Sat Dec 13 04:21:54 UTC 2014
+1.03 Sat Dec 13 04:21:54 UTC 2014
 	- Don't remove configuration options on loading things.
